@@ -1,0 +1,6 @@
+just_playback
+pynput
+pygame
+mido
+python-rtmidi
+textual

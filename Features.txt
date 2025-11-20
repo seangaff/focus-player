@@ -1,0 +1,48 @@
+Project: Focus player
+
+Music player rewarding productivity with dopamine while allowing you to think.
+
+Main concept: play music only when user is typing to induce dopamine when productive, fade music out when they stop to help collect thoughts/ relax/regroup.
+
+Potential features:
+
+- Background music, white or brown noise that plays when no keys pressed
+- Options for musics playback
+    - Each key mapped to a note
+    - Each key press plays a “note” of a song
+    - Music fades in and out with key presses
+        - Speed/volume of playback matches speed of key presses?
+- Key goal is to have music naturally flow with typing, should pause when typing stops.
+    - Scaling volume with WPM sliding window may not be enough? Velocity of typing may be more important.
+
+
+Tech Design:
+- Monitor: keylogger to detect key presses and measure WPM
+- Player: manages playback of music based on WPM or note mode, single song, playlist, and/or background track.
+- Session: tracks current song choices, WPM, time spend type, chars typed, breaks taken
+- Timer: Used to optionally set pomodoro style working and break intervals.
+- Interface: Simple CLI UI to start and stop, configure settings and view stats. using 
+
+
+UI Design:
+- Current Playback stats
+    - Current track
+    - Current Ambience track
+    - Current Playlist(if applicable)
+    - Volume for each 
+
+    - Total time of Session
+    - Total chars/words typed
+    - % time spent typing
+    - % time spent idle
+
+    - Pomodoro timer start/stop and set time/break
+    - Live Pomodoro timer
+
+    - Debug prints for WPM calculation
+
+How to Calculate volume:
+    - How should it feel
+        -  Music builds slow, need to be in the flow of typing first
+        -  Fades slowing
+        - 
