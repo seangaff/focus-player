@@ -12,6 +12,7 @@ Potential features:
     - Each key press plays a “note” of a song
     - Music fades in and out with key presses
         - Speed/volume of playback matches speed of key presses?
+    - DJ mode - shuffles music based on WPM
 - Key goal is to have music naturally flow with typing, should pause when typing stops.
     - Scaling volume with WPM sliding window may not be enough? Velocity of typing may be more important.
 
@@ -19,9 +20,9 @@ Potential features:
 Tech Design:
 - Monitor: keylogger to detect key presses and measure WPM
 - Player: manages playback of music based on WPM or note mode, single song, playlist, and/or background track.
-- Session: tracks current song choices, WPM, time spend type, chars typed, breaks taken
+- Session: tracks current song choices, WPM, time spend type, chars typed, breaks taken.
 - Timer: Used to optionally set pomodoro style working and break intervals.
-- Interface: Simple CLI UI to start and stop, configure settings and view stats. using 
+- Interface: Simple CLI UI to start and stop, configure settings and view stats. using Textual library.
 
 
 UI Design:
@@ -30,6 +31,11 @@ UI Design:
     - Current Ambience track
     - Current Playlist(if applicable)
     - Volume for each 
+    - Volume Visualized https://github.com/Textualize/textual-plotext 
+    
+    - Change song (song browser?)
+    - Play/Pause background
+    - Play/Pause music
 
     - Total time of Session
     - Total chars/words typed
@@ -40,9 +46,39 @@ UI Design:
     - Live Pomodoro timer
 
     - Debug prints for WPM calculation
+    - Different UI in different tabs
 
 How to Calculate volume:
     - How should it feel
         -  Music builds slow, need to be in the flow of typing first
+            -  music should not feel jumpy when you first start typing
         -  Fades slowing
-        - 
+        - Function keys should be ignored (maybe not necessary if need to reach base WPM for volume to start building)
+
+
+Questions:
+How to load songs? cli args, config file, in UI?
+
+TODO:
+Better volume Scaling - mostly better
+General Play/Pause button in TUI - Should it pause the timer or just playback?
+Define setup in config file.
+Can we detect system playback and pause? Turn off/pause focus mode when other music or video is playing.
+Live stats - max WPM, average WPM, total Chars, total time, % time typing, % time idle, 
+pomodor timer - jank
+Song picking and Playlist handling (maybe selection folder and choose to loop or Rand)
+Improve UI design
+Package and setup instructions
+
+
+How can this relate to music management app?
+Other ideas:
+- Animation or video thats plays/changes with WPM
+- Songs in playlist rated by energy level, auto DJ feature for switching song based on WPM trend
+
+
+Session object loads config as starting point
+all other objects loaded/updated from session or updated session
+
+each event loop, monitor updates sessions state
+player and UI updated from session

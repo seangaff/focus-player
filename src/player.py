@@ -6,7 +6,8 @@ from just_playback import Playback
 # import mido
 
 class Player:
-    def __init__(self):
+    def __init__(self, session):
+        self.session = session
         self.ambience_playback = Playback()
         self.music_playback = Playback()
         
@@ -79,8 +80,7 @@ class Player:
         self.target_music_volume = intensity
         
         # Ambience volume scales inversely
-        # But maybe we always want some ambience? Let's say min 0.2
-        self.target_ambience_volume = 1.0 - (intensity * 0.8) 
+        # self.target_ambience_volume = 1.0 - (intensity) 
 
     def update_volumes(self):
         """
@@ -93,17 +93,26 @@ class Player:
         elif self.music_volume > self.target_music_volume:
             self.music_volume = max(self.music_volume - self.smoothing_step, self.target_music_volume)
             
-        # Smooth ambience volume
-        if self.ambience_volume < self.target_ambience_volume:
-            self.ambience_volume = min(self.ambience_volume + self.smoothing_step, self.target_ambience_volume)
-        elif self.ambience_volume > self.target_ambience_volume:
-            self.ambience_volume = max(self.ambience_volume - self.smoothing_step, self.target_ambience_volume)
+        # Ambience volume scales inversely
+        self.ambience_volume = 1.0 - self.music_volume
 
-        # Apply volumes
         # Apply volumes
         # We set volume regardless of active state so it's ready when it starts or if it's playing
         self.music_playback.set_volume(self.music_volume)
         self.ambience_playback.set_volume(self.ambience_volume)
+
+    def get_progress(self):
+        """Returns progress info for tracks."""
+        return {
+            "ambience": {
+                "current": self.ambience_playback.curr_pos,
+                "total": self.ambience_playback.duration
+            },
+            "music": {
+                "current": self.music_playback.curr_pos,
+                "total": self.music_playback.duration
+            }
+        }
 
     def cleanup(self):
         self.stop()

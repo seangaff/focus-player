@@ -1,7 +1,13 @@
 import time
+import json
 
 class Session:
-    def __init__(self):
+    def __init__(self, config):
+        # Config is start state, can be updated during session
+        self.config = config
+
+        print(json.dumps(self.config, indent=4))
+        
         self.start_time = time.time()
         self.total_chars = 0
         self.current_wpm = 0

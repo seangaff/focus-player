@@ -4,8 +4,10 @@ from pynput import keyboard
 import threading
 
 class Monitor:
-    def __init__(self, window_seconds=60):
-        self.window_seconds = window_seconds
+    def __init__(self,session):
+        self.session = session
+        self.window_seconds = session.config["monitor"]["window_seconds"]
+        self.keys_ignored = session.config["monitor"]["keys_ignored"]
         self.keystrokes = deque()
         self.running = False
         self.listener = None
@@ -17,6 +19,9 @@ class Monitor:
 
     def on_press(self, key):
         current_time = time.time()
+        # Ignore keys in keys_ignored
+        if key in self.keys_ignored:
+            return
         self.keystrokes.append(current_time)
         
         # Notify callbacks
@@ -44,10 +49,10 @@ class Monitor:
 
         if self.keystrokes:
             time_elapsed = min(current_time - self.keystrokes[0], self.window_seconds)
-            # Avoid division by zero
-            if time_elapsed < 1:
-                time_elapsed = 1
-            wpm = (words / time_elapsed) * 60
+            # Avoid division by zero and enforce a minimum window for smoothing
+            # We use 5.0s so that WPM ramps up linearly over the first 5 seconds
+            effective_time = max(time_elapsed, 5.0)
+            wpm = (words / effective_time) * 60
         else:
             wpm = 0
             time_elapsed = 0

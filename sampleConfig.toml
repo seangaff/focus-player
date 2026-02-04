@@ -1,0 +1,23 @@
+# Focus Player Sample Config
+# Loaded in as starting sessions state
+
+[music]
+folder = "~/music/sets"
+default_song = "socialnetwork.mp3"
+shuffle = true
+max_volume = 80
+
+[ambience]
+folder = "~/music/ambience"
+default_song = "brownnoise.mp3"
+shuffle = false
+max_volume = 0
+
+[monitor]
+window_seconds = 15
+keys_ignored = ["esc","ctrl", "alt", "shift", "super", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"]
+
+[pomodoro]
+# Times in minutes
+work_interval = 25
+break_interval = 5
