@@ -1,23 +1,39 @@
 # Focus Player Sample Config
 # Loaded in as starting sessions state
 
-[music]
-folder = "~/music/sets"
+[stats]
+total_chars = 0
+total_time = 0
+completed_sessions = 0
+completed_break = 0
+average_wpm = 0
+max_wpm = 0
+
+[player]
+alert_sound = "../sounds/notification.mp3"
+mode = "adaptive"
+smoothing_step = 0.05
+
+[player.foreground]
+folder = "~/Music/sets"
 default_song = "socialnetwork.mp3"
 shuffle = true
-max_volume = 80
+loop = false
+max_volume = 100
 
-[ambience]
-folder = "~/music/ambience"
+[player.background]
+folder = "~/Music/ambience"
 default_song = "brownnoise.mp3"
 shuffle = false
-max_volume = 0
+loop = true
+max_volume = 80
 
 [monitor]
 window_seconds = 15
-keys_ignored = ["esc","ctrl", "alt", "shift", "super", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"]
+keys_ignored = ["Key.cmd"]
 
 [pomodoro]
 # Times in minutes
 work_interval = 25
 break_interval = 5
+alert_on_complete = true

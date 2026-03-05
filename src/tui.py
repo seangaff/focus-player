@@ -1,7 +1,6 @@
 from textual.app import App, ComposeResult
 from textual.containers import Container, Vertical, Horizontal
-from textual.widgets import Header, Footer, Static, ProgressBar, Label
-from textual.widgets import Header, Footer, Static, ProgressBar, Label, Button, Input
+from textual.widgets import Footer, Static, ProgressBar, Label, Button, Input
 from textual.reactive import reactive
 from textual.containers import Container, Vertical, Horizontal
 import time
@@ -14,12 +13,34 @@ class FocusApp(App):
         align: center middle;
     }
 
+    #main-container {
+        layout: grid;
+        grid-size: 2 2;
+        grid-columns: 1fr 1fr;
+        grid-rows: 1fr 1fr;
+        padding: 0 1;
+        /* Textual automatically reserves space for the docked Footer */
+        height: 100%;
+        width: 100%;
+    }
+
     #stats-container {
-        width: 60%;
-        height: auto;
         border: solid green;
-        padding: 1 2;
-        margin-bottom: 2;
+        padding: 0 1;
+        height: 100%;
+    }
+
+    #volume-container {
+        border: solid blue;
+        padding: 0 1;
+        row-span: 2;
+        height: 100%;
+    }
+
+    #pomodoro-container {
+        border: solid red;
+        padding: 0 1;
+        height: 100%;
     }
 
     #wpm-display {
@@ -34,28 +55,6 @@ class FocusApp(App):
         text-align: center;
     }
 
-    #volume-container {
-        width: 60%;
-        height: auto;
-        border: solid blue;
-        padding: 1 2;
-    }
-    
-    #volume-container {
-        width: 60%;
-        height: auto;
-        border: solid blue;
-        padding: 1 2;
-        margin-bottom: 2;
-    }
-
-    #pomodoro-container {
-        width: 60%;
-        height: auto;
-        border: solid red;
-        padding: 1 2;
-    }
-
     #timer-display {
         text-align: center;
         text-style: bold;
@@ -67,13 +66,17 @@ class FocusApp(App):
     }
     
     .timer-controls {
+        layout: horizontal;
         align: center middle;
         height: auto;
         margin-top: 1;
+        width: 100%;
     }
     
     Button {
         margin: 0 1;
+        width: auto;
+        min-width: 8;
     }
 
     ProgressBar {
@@ -100,41 +103,41 @@ class FocusApp(App):
         self.pomodoro = pomodoro
 
     def compose(self) -> ComposeResult:
-        yield Header()
-        yield Container(
-            Static("WPM", classes="stat-label"),
-            Static("0.0", id="wpm-display"),
-            Static("Time: 0s", id="time-display", classes="stat-label"),
-            id="stats-container"
-        )
-        yield Container(
-            Label("Music Volume"),
-            ProgressBar(total=1.0, show_eta=False, id="music-bar"),
-            Label("Music Progress"),
-            ProgressBar(total=100.0, show_eta=False, id="music-progress"),
-            
-            Label("Ambience Volume"),
-            ProgressBar(total=1.0, show_eta=False, id="ambience-bar"),
-            Label("Ambience Progress"),
-            ProgressBar(total=100.0, show_eta=False, id="ambience-progress"),
-            id="volume-container"
-        )
-        yield Container(
-            Label("Pomodoro Timer"),
-            Static("25:00", id="timer-display"),
-            Horizontal(
-                Button("Start", id="pomo-start", variant="success"),
-                Button("Pause", id="pomo-pause", variant="warning"),
-                Button("Reset", id="pomo-reset", variant="error"),
-                Button("Switch Mode", id="pomo-switch", variant="primary"),
-                classes="timer-controls"
-            ),
-            Label("Work (min):", classes="stat-label"), 
-            Input(value="25", id="work-input", type="integer"),
-            Label("Break (min):", classes="stat-label"),
-            Input(value="5", id="break-input", type="integer"),
-            id="pomodoro-container"
-        )
+        with Container(id="main-container"):
+            yield Container(
+                Static("WPM", classes="stat-label"),
+                Static("0.0", id="wpm-display"),
+                Static("Time: 0s", id="time-display", classes="stat-label"),
+                id="stats-container"
+            )
+            yield Container(
+                Label("Music Volume"),
+                ProgressBar(total=1.0, show_eta=False, id="music-bar"),
+                Label("Music Progress"),
+                ProgressBar(total=100.0, show_eta=False, id="music-progress"),
+                
+                Label("Ambience Volume"),
+                ProgressBar(total=1.0, show_eta=False, id="ambience-bar"),
+                Label("Ambience Progress"),
+                ProgressBar(total=100.0, show_eta=False, id="ambience-progress"),
+                id="volume-container"
+            )
+            yield Container(
+                Label("Pomodoro Timer"),
+                Static("25:00", id="timer-display"),
+                Horizontal(
+                    Button("Start", id="pomo-start", variant="success"),
+                    Button("Pause", id="pomo-pause", variant="warning"),
+                    Button("Reset", id="pomo-reset", variant="error"),
+                    Button("Switch Mode", id="pomo-switch", variant="primary"),
+                    classes="timer-controls"
+                ),
+                Label("Work (min):", classes="stat-label"), 
+                Input(value="25", id="work-input", type="integer"),
+                Label("Break (min):", classes="stat-label"),
+                Input(value="5", id="break-input", type="integer"),
+                id="pomodoro-container"
+            )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -144,28 +147,27 @@ class FocusApp(App):
 
     def update_loop(self) -> None:
         """Main update loop."""
-        # 1. Get stats from Monitor
-        wpm, chars, elapsed = self.monitor.calculate_wpm()
-        self.session.update(wpm, chars)
-        
-        # 2. Update Player logic
-        # Cap at 100 WPM for max intensity
-        intensity = min(max(wpm / 100, 0), 1)
-        self.player.set_intensity(intensity)
-        self.player.update_volumes()
+        # 1. Run agent ticks to update their state and the session
+        self.monitor.tick()
+        self.player.tick()
+        self.pomodoro.tick()
+
+        # 2. Extract state from session for UI components
+        wpm = self.session.current_wpm
+        elapsed = time.time() - self.session.start_time
 
         # 3. Update UI Reactive variables
         self.wpm = wpm
         self.elapsed = elapsed
-        self.music_vol = self.player.music_volume
-        self.ambience_vol = self.player.ambience_volume
+        self.music_vol = self.player.foreground_volume
+        self.ambience_vol = self.player.background_volume
 
-        # 4. Update Widgets directly (reactive watchers can also be used but direct update is fine for simple cases)
+        # 4. Update Widgets
         self.query_one("#wpm-display", Static).update(f"{wpm:.1f}")
         self.query_one("#time-display", Static).update(f"Time: {elapsed:.1f}s")
         
         music_bar = self.query_one("#music-bar", ProgressBar)
-        music_bar.progress = self.music_vol
+        music_bar.progress = self.music_vol # Changed from foreground_vol to music_vol
         
         ambience_bar = self.query_one("#ambience-bar", ProgressBar)
         ambience_bar.progress = self.ambience_vol
@@ -186,8 +188,7 @@ class FocusApp(App):
         if a_total > 0:
             amb_prog.update(total=a_total, progress=a_curr)
 
-        # 5. Update Pomodoro
-        self.pomodoro.tick()
+        # 5. Update Pomodoro display
         self.query_one("#timer-display", Static).update(self.pomodoro.get_time_display())
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

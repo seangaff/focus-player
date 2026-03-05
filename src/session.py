@@ -1,20 +1,30 @@
 import time
 import json
+import tomllib
 
 class Session:
-    def __init__(self, config):
+    def __init__(self, config_path: str):
         # Config is start state, can be updated during session
-        self.config = config
-
-        print(json.dumps(self.config, indent=4))
+        self.config = self.load_config(config_path)
         
         self.start_time = time.time()
         self.total_chars = 0
         self.current_wpm = 0
         self.max_wpm = 0
+        
         self.breaks_taken = 0
         self.last_activity_time = time.time()
         self.is_active = False
+
+    def load_config(self, config_path="../sampleConfig.toml"):
+        try:
+            with open(config_path, "rb") as f:
+                config = tomllib.load(f)
+        # TODO: Add config validation and specifc error handling, assume config correct for now
+        except Exception as e:
+            print(f"Error loading config: {e}")
+            return None
+        return config
 
     def update(self, wpm, char_count):
         self.current_wpm = wpm

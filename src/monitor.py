@@ -2,6 +2,7 @@ import time
 from collections import deque
 from pynput import keyboard
 import threading
+from session import Session
 
 class Monitor:
     def __init__(self,session):
@@ -13,6 +14,8 @@ class Monitor:
         self.listener = None
         self.callbacks = []
 
+        self.start()
+
     def add_callback(self, callback):
         """Add a callback function to be called on key press."""
         self.callbacks.append(callback)
@@ -20,7 +23,7 @@ class Monitor:
     def on_press(self, key):
         current_time = time.time()
         # Ignore keys in keys_ignored
-        if key in self.keys_ignored:
+        if str(key) in self.keys_ignored:
             return
         self.keystrokes.append(current_time)
         
@@ -59,6 +62,10 @@ class Monitor:
             
         return wpm, char_count, time_elapsed
 
+    def tick(self):
+        wpm, char_count, _ = self.calculate_wpm()
+        self.session.update(wpm, char_count)
+
     def start(self):
         self.running = True
         self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
@@ -70,3 +77,10 @@ class Monitor:
         if self.listener:
             self.listener.stop()
             self.listener = None
+
+if __name__ == "__main__":
+    session = Session("../sampleConfig.toml")
+    monitor = Monitor(session)
+    monitor.start()
+    time.sleep(100)
+    monitor.stop()
