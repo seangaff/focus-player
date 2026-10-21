@@ -1,9 +1,9 @@
+import time
+
 from textual.app import App, ComposeResult
-from textual.containers import Container, Vertical, Horizontal
+from textual.containers import Container, Horizontal
 from textual.widgets import Footer, Static, ProgressBar, Label, Button, Input
 from textual.reactive import reactive
-from textual.containers import Container, Vertical, Horizontal
-import time
 
 class FocusApp(App):
     """A Textual app for Focus Player."""
@@ -28,6 +28,7 @@ class FocusApp(App):
         border: solid green;
         padding: 0 1;
         height: 100%;
+        overflow-y: auto;
     }
 
     #volume-container {
@@ -53,6 +54,13 @@ class FocusApp(App):
     .stat-label {
         width: 100%;
         text-align: center;
+        text-style: bold;
+        color: yellow;
+    }
+    
+    .stat-value {
+        width: 100%;
+        text-align: center;
     }
 
     #timer-display {
@@ -73,14 +81,29 @@ class FocusApp(App):
         width: 100%;
     }
     
+    .playback-controls {
+        layout: horizontal;
+        align: center middle;
+        height: auto;
+        width: 100%;
+        margin-bottom: 1;
+    }
+    
     Button {
         margin: 0 1;
         width: auto;
         min-width: 8;
     }
 
-    ProgressBar {
+    #music-progress, #ambience-progress {
+        margin-bottom: 0;
+    }
+    
+    .track-info {
+        text-align: center;
+        width: 100%;
         margin-bottom: 1;
+        color: yellow;
     }
     
     Label {
@@ -105,26 +128,51 @@ class FocusApp(App):
     def compose(self) -> ComposeResult:
         with Container(id="main-container"):
             yield Container(
-                Static("WPM", classes="stat-label"),
-                Static("0.0", id="wpm-display"),
-                Static("Time: 0s", id="time-display", classes="stat-label"),
+                Static("Stats", classes="stat-label"),
+                Static("Time: 00:00", id="time-display", classes="stat-value"),
+                Static("WPM: 0.0", id="wpm-display", classes="stat-value"),
+                Static("Avg WPM: 0.0", id="avg-wpm-display", classes="stat-value"),
+                Static("Max WPM: 0.0", id="max-wpm-display", classes="stat-value"),
+                Static("Total Chars: 0", id="total-chars-display", classes="stat-value"),
+                Static("Typing: 0%", id="typing-display", classes="stat-value"),
+                Static("Idle: 0%", id="idle-display", classes="stat-value"),
+                Static("Sessions: 0", id="sessions-display", classes="stat-value"),
+                Static("Breaks: 0", id="breaks-display", classes="stat-value"),
                 id="stats-container"
             )
             yield Container(
+                # Foreground Music
                 Label("Music Volume"),
                 ProgressBar(total=1.0, show_eta=False, id="music-bar"),
-                Label("Music Progress"),
+                Horizontal(
+                    Button("🔀", id="shuffle-fg", variant="primary"),
+                    Button("⏮", id="last-fg"),
+                    Button("⏯", id="play-fg"),
+                    Button("⏭", id="next-fg"),
+                    Button("🔁", id="loop-fg", variant="primary"),
+                    classes="playback-controls"
+                ),
+                Label("No Track", id="music-track-info", classes="track-info"),
                 ProgressBar(total=100.0, show_eta=False, id="music-progress"),
                 
+                # Background Ambience
                 Label("Ambience Volume"),
                 ProgressBar(total=1.0, show_eta=False, id="ambience-bar"),
-                Label("Ambience Progress"),
+                Horizontal(
+                    Button("🔀", id="shuffle-bg", variant="primary"),
+                    Button("⏮", id="last-bg"),
+                    Button("⏯", id="play-bg"),
+                    Button("⏭", id="next-bg"),
+                    Button("🔁", id="loop-bg", variant="primary"),
+                    classes="playback-controls"
+                ),
+                Label("No Track", id="ambience-track-info", classes="track-info"),
                 ProgressBar(total=100.0, show_eta=False, id="ambience-progress"),
                 id="volume-container"
             )
             yield Container(
                 Label("Pomodoro Timer"),
-                Static("25:00", id="timer-display"),
+                Static(self.pomodoro.get_time_display(), id="timer-display"),
                 Horizontal(
                     Button("Start", id="pomo-start", variant="success"),
                     Button("Pause", id="pomo-pause", variant="warning"),
@@ -132,10 +180,10 @@ class FocusApp(App):
                     Button("Switch Mode", id="pomo-switch", variant="primary"),
                     classes="timer-controls"
                 ),
-                Label("Work (min):", classes="stat-label"), 
-                Input(value="25", id="work-input", type="integer"),
+                Label("Work (min):", classes="stat-label"),
+                Input(value=str(int(self.pomodoro.work_seconds // 60)), id="work-input", type="integer"),
                 Label("Break (min):", classes="stat-label"),
-                Input(value="5", id="break-input", type="integer"),
+                Input(value=str(int(self.pomodoro.break_seconds // 60)), id="break-input", type="integer"),
                 id="pomodoro-container"
             )
         yield Footer()
@@ -150,7 +198,8 @@ class FocusApp(App):
         # 1. Run agent ticks to update their state and the session
         self.monitor.tick()
         self.player.tick()
-        self.pomodoro.tick()
+        if self.pomodoro.tick() and self.pomodoro.alert_on_complete:
+            self.player.play_alert()
 
         # 2. Extract state from session for UI components
         wpm = self.session.current_wpm
@@ -163,8 +212,20 @@ class FocusApp(App):
         self.ambience_vol = self.player.background_volume
 
         # 4. Update Widgets
-        self.query_one("#wpm-display", Static).update(f"{wpm:.1f}")
-        self.query_one("#time-display", Static).update(f"Time: {elapsed:.1f}s")
+        def fmt_time(seconds):
+            m = int(seconds // 60)
+            s = int(seconds % 60)
+            return f"{m:02d}:{s:02d}"
+
+        self.query_one("#time-display", Static).update(f"Time: {fmt_time(elapsed)}")
+        self.query_one("#wpm-display", Static).update(f"WPM: {wpm:.1f}")
+        self.query_one("#avg-wpm-display", Static).update(f"Avg WPM: {self.session.average_wpm:.1f}")
+        self.query_one("#max-wpm-display", Static).update(f"Max WPM: {self.session.max_wpm:.1f}")
+        self.query_one("#total-chars-display", Static).update(f"Total Chars: {self.session.total_chars}")
+        self.query_one("#typing-display", Static).update(f"Typing: {self.session.typing_percent():.0f}%")
+        self.query_one("#idle-display", Static).update(f"Idle: {self.session.idle_percent():.0f}%")
+        self.query_one("#sessions-display", Static).update(f"Sessions: {self.session.completed_sessions}")
+        self.query_one("#breaks-display", Static).update(f"Breaks: {self.session.completed_breaks}")
         
         music_bar = self.query_one("#music-bar", ProgressBar)
         music_bar.progress = self.music_vol # Changed from foreground_vol to music_vol
@@ -172,27 +233,43 @@ class FocusApp(App):
         ambience_bar = self.query_one("#ambience-bar", ProgressBar)
         ambience_bar.progress = self.ambience_vol
         
-        # Update Progress Bars
+        # Update Progress Bars and Track Info
         progress = self.player.get_progress()
         
-        music_prog = self.query_one("#music-progress", ProgressBar)
+        # Helper to format mm:ss for tracks
+        def fmt_track(seconds):
+            m = int(seconds // 60)
+            s = int(seconds % 60)
+            return f"{m}:{s:02d}"
+
+        # Music (Foreground)
         m_curr = progress["music"]["current"]
         m_total = progress["music"]["total"]
-        if m_total > 0:
-            music_prog.update(total=m_total, progress=m_curr)
+        m_name = progress["music"]["name"]
+        
+        self.query_one("#music-track-info", Label).update(f"{m_name} ({fmt_track(m_curr)} / {fmt_track(m_total)})")
+        self.query_one("#music-progress", ProgressBar).update(total=m_total, progress=m_curr)
+        
+        self.query_one("#shuffle-fg", Button).variant = "success" if progress["music"]["shuffle"] else "primary"
+        self.query_one("#loop-fg", Button).variant = "success" if progress["music"]["loop"] else "primary"
             
-        amb_prog = self.query_one("#ambience-progress", ProgressBar)
+        # Ambience (Background)
         a_curr = progress["ambience"]["current"]
         a_total = progress["ambience"]["total"]
+        a_name = progress["ambience"]["name"]
 
-        if a_total > 0:
-            amb_prog.update(total=a_total, progress=a_curr)
+        self.query_one("#ambience-track-info", Label).update(f"{a_name} ({fmt_track(a_curr)} / {fmt_track(a_total)})")
+        self.query_one("#ambience-progress", ProgressBar).update(total=a_total, progress=a_curr)
+        
+        self.query_one("#shuffle-bg", Button).variant = "success" if progress["ambience"]["shuffle"] else "primary"
+        self.query_one("#loop-bg", Button).variant = "success" if progress["ambience"]["loop"] else "primary"
 
         # 5. Update Pomodoro display
         self.query_one("#timer-display", Static).update(self.pomodoro.get_time_display())
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
+        # Pomodoro Controls
         if button_id == "pomo-start":
             self.pomodoro.start()
         elif button_id == "pomo-pause":
@@ -201,6 +278,30 @@ class FocusApp(App):
             self.pomodoro.reset()
         elif button_id == "pomo-switch":
             self.pomodoro.toggle_mode()
+            
+        # Foreground Controls
+        elif button_id == "play-fg":
+            self.player.toggle_fg_play()
+        elif button_id == "next-fg":
+            self.player.fg_next()
+        elif button_id == "last-fg":
+            self.player.fg_last()
+        elif button_id == "shuffle-fg":
+            self.player.set_fg_shuffle(not self.player.fg_shuffle)
+        elif button_id == "loop-fg":
+            self.player.fg_loop = not self.player.fg_loop
+
+        # Background Controls
+        elif button_id == "play-bg":
+            self.player.toggle_bg_play()
+        elif button_id == "next-bg":
+            self.player.bg_next()
+        elif button_id == "last-bg":
+            self.player.bg_last()
+        elif button_id == "shuffle-bg":
+            self.player.set_bg_shuffle(not self.player.bg_shuffle)
+        elif button_id == "loop-bg":
+            self.player.bg_loop = not self.player.bg_loop
             
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "work-input":
@@ -218,5 +319,6 @@ class FocusApp(App):
 
     def on_unmount(self) -> None:
         """Called when app exits."""
+        self.session.save()
         self.monitor.stop()
         self.player.cleanup()

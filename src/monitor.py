@@ -1,11 +1,10 @@
 import time
 from collections import deque
 from pynput import keyboard
-import threading
 from session import Session
 
 class Monitor:
-    def __init__(self,session):
+    def __init__(self, session, start_listener=True):
         self.session = session
         self.window_seconds = session.config["monitor"]["window_seconds"]
         self.keys_ignored = session.config["monitor"]["keys_ignored"]
@@ -14,7 +13,8 @@ class Monitor:
         self.listener = None
         self.callbacks = []
 
-        self.start()
+        if start_listener:
+            self.start()
 
     def add_callback(self, callback):
         """Add a callback function to be called on key press."""
@@ -26,6 +26,7 @@ class Monitor:
         if str(key) in self.keys_ignored:
             return
         self.keystrokes.append(current_time)
+        self.session.add_char()
         
         # Notify callbacks
         for callback in self.callbacks:
@@ -39,8 +40,8 @@ class Monitor:
             # We don't stop here, let the main loop handle stop
             pass
 
-    def calculate_wpm(self):
-        current_time = time.time()
+    def calculate_wpm(self, now=None):
+        current_time = time.time() if now is None else now
 
         # remove keystrokes from outside the time window
         cutoff_time = current_time - self.window_seconds
@@ -64,7 +65,7 @@ class Monitor:
 
     def tick(self):
         wpm, char_count, _ = self.calculate_wpm()
-        self.session.update(wpm, char_count)
+        self.session.update(wpm)
 
     def start(self):
         self.running = True

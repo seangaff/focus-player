@@ -2,16 +2,19 @@
 # Loaded in as starting sessions state
 
 [stats]
-total_chars = 0
-total_time = 0
-completed_sessions = 0
-completed_break = 0
-average_wpm = 0
-max_wpm = 0
+total_chars = 3051
+total_time = 11165
+completed_sessions = 6
+completed_break = 6
+average_wpm = 1.1321
+max_wpm = 160.8
 
 [player]
-alert_sound = "../sounds/notification.mp3"
+# Relative paths are resolved from this config file. ~ and absolute paths are left as-is.
+alert_sound = "sounds/notification.mp3"
+# Only "adaptive" is implemented: music volume follows typing speed.
 mode = "adaptive"
+# Volume change per UI tick, on a 0.0–1.0 scale.
 smoothing_step = 0.05
 
 [player.foreground]
@@ -19,6 +22,8 @@ folder = "~/Music/sets"
 default_song = "socialnetwork.mp3"
 shuffle = true
 loop = false
+# Volumes are percentages, 0–100.
+min_volume = 0
 max_volume = 100
 
 [player.background]
@@ -26,6 +31,7 @@ folder = "~/Music/ambience"
 default_song = "brownnoise.mp3"
 shuffle = false
 loop = true
+min_volume = 0
 max_volume = 80
 
 [monitor]
